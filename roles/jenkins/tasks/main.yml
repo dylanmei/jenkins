@@ -27,13 +27,6 @@
     state: present
     name: jenkins_backup
 
-- name: Install git config
-  copy:
-    src: /root/.gitconfig
-    dest: /usr/local/jenkins/.gitconfig
-    owner: jenkins
-    group: jenkins
-
 - name: Install sudo
   pkgng:
     name: sudo
