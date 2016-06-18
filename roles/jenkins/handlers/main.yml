@@ -9,7 +9,7 @@
 
 - name: restore jenkins
   unarchive:
-    src: /tmp/jenkins.tar.tz
+    src: /tmp/jenkins.tar.gz
     dest: /usr/local/jenkins
     owner: jenkins
     group: jenkins
