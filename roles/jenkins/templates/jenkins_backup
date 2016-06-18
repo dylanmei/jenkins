@@ -1,0 +1,9 @@
+#!/bin/sh
+dir=/usr/local/jenkins
+bucket=diogenes-jenkins
+object=jenkins.tar.gz
+tmpbase=`basename ${0}`
+tmpfile=`mktemp /tmp/${tmpbase}.XXXX` || exit 1
+trap 'rm "${tmpfile}"' EXIT
+tar -C "${dir}" -czf "${tmpfile}" .
+/usr/local/bin/aws s3 cp "${tmpfile}" "s3://${bucket}/${object}"

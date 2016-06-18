@@ -1,0 +1,21 @@
+---
+
+- name: fetch jenkins
+  s3:
+    mode: get
+    bucket: diogenes-jenkins
+    object: /jenkins.tar.gz
+    dest: /tmp/jenkins.tar.gz
+
+- name: restore jenkins
+  unarchive:
+    src: /tmp/jenkins.tar.tz
+    dest: /usr/local/jenkins
+    owner: jenkins
+    group: jenkins
+
+- name: enable jenkins
+  service:
+    name: jenkins
+    enabled: yes
+    state: started

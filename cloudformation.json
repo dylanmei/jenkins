@@ -1,0 +1,255 @@
+{
+
+  "AWSTemplateFormatVersion": "2010-09-09",
+
+  "Description": "Jenkins server",
+
+  "Metadata": {
+  },
+
+  "Parameters": {
+
+    "AnsibleUrl": {
+      "Description": "Ansible playbook location",
+      "Type": "String"
+    },
+
+    "BuildNumber": {
+      "Description": "Build number",
+      "Type": "String"
+    },
+
+    "KeyName": {
+      "Description": "SSH key to use",
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+
+    "InstanceType": {
+      "Description": "Instance type to use",
+      "Type": "String"
+    },
+
+    "Project": {
+      "Description": "Project name",
+      "Default": "jenkins",
+      "Type": "String"
+    }
+
+  },
+
+  "Mappings": {
+    "Regions": {
+      "ap-southeast-2": {
+        "ImageId": "ami-80e8cae3"
+      }
+    }
+  },
+
+  "Conditions": {
+  },
+
+  "Resources": {
+
+    "Vpc":{
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "192.168.0.0/16",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "InstanceTenancy": "default",
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ]
+      }
+    },
+
+    "SubnetA": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": { "Fn::Select": [ 0, { "Fn::GetAZs": "" } ] },
+        "CidrBlock": "192.168.0.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ],
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "SubnetB": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": { "Fn::Select": [ 1, { "Fn::GetAZs": "" } ] },
+        "CidrBlock": "192.168.1.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ],
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "SubnetC": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": { "Fn::Select": [ 2, { "Fn::GetAZs": "" } ] },
+        "CidrBlock": "192.168.2.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ],
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "InternetGateway":
+    {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ]
+      }
+    },
+
+    "VpcGatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "InternetGatewayId": { "Ref": "InternetGateway" },
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "Vpc" },
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ]
+      }
+    },
+
+    "Route": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": { "Ref": "InternetGateway" },
+        "RouteTableId": { "Ref": "RouteTable" }
+      }
+    },
+
+    "SubnetRouteTableAssociationA": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": { "Ref": "RouteTable" },
+        "SubnetId": { "Ref": "SubnetA" }
+      }
+    },
+
+    "SubnetRouteTableAssociationB": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": { "Ref": "RouteTable" },
+        "SubnetId": { "Ref": "SubnetB" }
+      }
+    },
+
+    "SubnetRouteTableAssociationC": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": { "Ref": "RouteTable" },
+        "SubnetId": { "Ref": "SubnetC" }
+      }
+    },
+
+    "SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Permit SSH and HTTPS",
+        "SecurityGroupIngress": [
+          { "IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": "0.0.0.0/0" }
+        ],
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ],
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "Role": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AdministratorAccess"
+        ]
+      }
+    },
+
+    "InstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          { "Ref": "Role" }
+        ]
+      }
+    },
+
+    "LaunchConfiguration":{
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "AssociatePublicIpAddress": true,
+        "EbsOptimized": false,
+        "IamInstanceProfile": { "Ref": "InstanceProfile" },
+        "ImageId": { "Fn::FindInMap": [ "Regions", { "Ref": "AWS::Region" }, "ImageId" ] },
+        "InstanceMonitoring": false,
+        "InstanceType": { "Ref": "InstanceType" },
+        "KeyName": { "Ref": "KeyName" },
+        "PlacementTenancy": "default",
+        "SecurityGroups": [
+          { "Ref": "SecurityGroup" }
+        ],
+        "UserData": { "Fn::Base64": { "Fn::Join": [ "\n", [
+          "#!/bin/sh",
+          "cat >> /etc/rc.conf << EOF",
+          "firstboot_pkgs_list=\"ansible awscli git python\"",
+          "EOF",
+          "cat > /etc/rc.local << EOF",
+          ". /root/.profile",
+          { "Fn::Join": [ " ", [ "ansible-pull -U", { "Ref": "AnsibleUrl" } ] ] },
+          "EOF"
+        ] ] } }
+      }
+    },
+
+		"AutoScalingGroup": {
+			"Type": "AWS::AutoScaling::AutoScalingGroup",
+			"Properties": {
+        "Cooldown": 1800,
+        "DesiredCapacity": 1,
+        "HealthCheckGracePeriod": 900,
+        "HealthCheckType": "EC2",
+        "LaunchConfigurationName": { "Ref": "LaunchConfiguration" },
+        "MaxSize": 1,
+        "MinSize": 1,
+        "Tags": [
+          { "Key": "Name", "Value": { "Ref": "Project" }, "PropagateAtLaunch": true },
+          { "Key": "Build", "Value": { "Ref": "BuildNumber" }, "PropagateAtLaunch": true }
+        ],
+        "VPCZoneIdentifier": [
+          { "Ref": "SubnetA" },
+          { "Ref": "SubnetB" },
+          { "Ref": "SubnetC" }
+        ]
+			}
+		}
+
+  },
+
+  "Outputs": {
+  }
+
+}

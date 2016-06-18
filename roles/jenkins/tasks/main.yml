@@ -1,0 +1,46 @@
+---
+
+- name: Install boto
+  pkgng:
+    name: py27-boto
+    state: present
+
+- name: Install Jenkins
+  pkgng:
+    name: jenkins
+    state: present
+  notify:
+    - fetch jenkins
+    - restore jenkins
+    - enable jenkins
+
+- name: Install backup script
+  template:
+    src: jenkins_backup
+    dest: /usr/local/bin/jenkins_backup
+    mode: 0755
+
+- name: Add backup script to cron
+  cron:
+    job: "/usr/local/bin/jenkins_backup > /dev/null 2>&1"
+    special_time: hourly
+    state: present
+    name: jenkins_backup
+
+- name: Install git config
+  copy:
+    src: /root/.gitconfig
+    dest: /usr/local/jenkins/.gitconfig
+    owner: jenkins
+    group: jenkins
+
+- name: Install sudo
+  pkgng:
+    name: sudo
+    state: present
+
+- name: Jenkins in sudoers
+  lineinfile:
+    dest: /usr/local/etc/sudoers
+    state: present
+    line: "jenkins ALL=(ALL) NOPASSWD: ALL"
