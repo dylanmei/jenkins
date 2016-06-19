@@ -1,5 +1,8 @@
 ---
 
+- name: Gather EC2 facts
+  ec2_facts:
+
 - name: Install boto
   pkgng:
     name: py27-boto
@@ -37,3 +40,14 @@
     dest: /usr/local/etc/sudoers
     state: present
     line: "jenkins ALL=(ALL) NOPASSWD: ALL"
+
+- name: Set DNS
+  route53:
+    command: create
+    overwrite: yes
+    record: jenkins.dylanscott.com.au.
+    ttl: 300
+    type: CNAME
+    value: "{{ ansible_ec2_local_hostname }}"
+    wait: yes
+    zone: dylanscott.com.au.
