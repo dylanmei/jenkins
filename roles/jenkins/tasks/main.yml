@@ -48,5 +48,5 @@
     record: jenkins.dylanscott.com.au.
     ttl: 300
     type: CNAME
-    value: "{{ ansible_ec2_local_hostname }}"
+    value: "{{ ansible_ec2_public_hostname }}"
     zone: dylanscott.com.au.
