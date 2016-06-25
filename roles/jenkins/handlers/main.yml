@@ -30,6 +30,12 @@
     enabled: yes
     state: started
 
+- name: config jenkins
+  lineinfile:
+    line: jenkins_args="--webroot=/usr/local/jenkins/war --httpPort=8180"
+    dest: /etc/rc.conf
+    state: present
+
 - name: enable nginx
   service:
     name: nginx

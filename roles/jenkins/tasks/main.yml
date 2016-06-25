@@ -47,6 +47,7 @@
     - fetch jenkins dir
     - restore jenkins dir
     - restore jenkins war
+    - config jenkins
     - enable jenkins
 
 - name: Install backup script
