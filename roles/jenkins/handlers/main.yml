@@ -3,14 +3,21 @@
 - name: run letsencrypt.sh
   command: letsencrypt.sh -c
 
-- name: fetch jenkins
+- name: restore jenkins war
+  s3:
+    mode: get
+    bucket: diogenes-jenkins
+    object: /jenkins.war
+    dest: /usr/local/share/jenkins/jenkins.war
+
+- name: fetch jenkins dir
   s3:
     mode: get
     bucket: diogenes-jenkins
     object: /jenkins.tar.gz
     dest: /tmp/jenkins.tar.gz
 
-- name: restore jenkins
+- name: restore jenkins dir
   unarchive:
     src: /tmp/jenkins.tar.gz
     dest: /usr/local/jenkins

@@ -44,8 +44,9 @@
     name: jenkins
     state: present
   notify:
-    - fetch jenkins
-    - restore jenkins
+    - fetch jenkins dir
+    - restore jenkins dir
+    - restore jenkins war
     - enable jenkins
 
 - name: Install backup script
