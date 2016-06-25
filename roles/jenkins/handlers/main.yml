@@ -1,5 +1,8 @@
 ---
 
+- name: run letsencrypt.sh
+  command: letsencrypt.sh -c
+
 - name: fetch jenkins
   s3:
     mode: get
@@ -19,3 +22,15 @@
     name: jenkins
     enabled: yes
     state: started
+
+- name: enable nginx
+  service:
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: reload nginx
+  service:
+    name: nginx
+    enabled: yes
+    state: reloaded

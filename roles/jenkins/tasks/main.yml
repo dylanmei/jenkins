@@ -8,6 +8,37 @@
     name: py27-boto
     state: present
 
+- name: Install letsencrypt.sh
+  pkgng:
+    name: letsencrypt.sh
+    state: present
+
+- name: Configure letsencrypt.sh
+  template:
+    src: "{{ item }}"
+    dest: "/usr/local/etc/letsencrypt.sh/{{ item }}"
+    mode: 0700
+  with_items:
+    - config.sh
+    - domains.txt
+  notify: run letsencrypt.sh
+
+- name: Add hook for letsencrypt.sh
+  template:
+    src: "{{ item }}"
+    dest: "/usr/local/etc/letsencrypt.sh/{{ item }}"
+    mode: 0755
+  with_items:
+    - hook.sh
+  notify: run letsencrypt.sh
+
+- name: Add letsencrypt.sh to periodic.conf
+  lineinfile:
+    create: yes
+    dest: /etc/periodic.conf
+    line: weekly_letsencrypt_enable="YES"
+    state: present
+
 - name: Install Jenkins
   pkgng:
     name: jenkins
@@ -50,3 +81,18 @@
     type: CNAME
     value: "{{ ansible_ec2_public_hostname }}"
     zone: dylanscott.com.au.
+
+- name: Install Nginx
+  pkgng:
+    name: nginx-devel
+    state: present
+  notify: enable nginx
+
+- name: Configure Nginx
+  template:
+    src: "{{ item }}"
+    dest: "/usr/local/etc/nginx/{{ item }}"
+  with_items:
+    - nginx.conf
+    - ssl.conf
+  notify: reload nginx
