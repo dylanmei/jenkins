@@ -3,7 +3,7 @@ bucket=diogenes-jenkins
 dir=/usr/local/jenkins
 warfile=/usr/local/share/jenkins/jenkins.war
 dirobject=jenkins.tar.gz
-warobject=jenkins.tar.gz
+warobject=jenkins.war
 tmpbase=`basename ${0}`
 tmpfile=`mktemp /tmp/${tmpbase}.XXXX` || exit 1
 trap 'rm "${tmpfile}"' EXIT
