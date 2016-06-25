@@ -220,7 +220,7 @@
           "EOF",
           "cat > /etc/rc.local << EOF",
           ". /root/.profile",
-          { "Fn::Join": [ " ", [ "ansible-pull -U", { "Ref": "AnsibleUrl" } ] ] },
+          { "Fn::Join": [ " ", [ "ansible-pull -U", { "Ref": "AnsibleUrl" }, "jenkins.yml" ] ] },
           "EOF"
         ] ] } }
       }
