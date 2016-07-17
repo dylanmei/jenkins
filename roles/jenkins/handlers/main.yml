@@ -9,8 +9,11 @@
     enabled: yes
     state: started
 
+- name: restore jenkins
+  command: "/usr/local/bin/aws s3 sync s3://{{ bucket }} /usr/local/jenkins"
+
 - name: config jenkins
-  command: sysrc jenkins_args="--webroot=/usr/local/jenkins/war --httpPort=8180"
+  command: "sysrc jenkins_args='--webroot=/usr/local/jenkins/war --httpPort=8180'"
 
 - name: enable nginx
   service:

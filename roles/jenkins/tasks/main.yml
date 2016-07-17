@@ -47,29 +47,12 @@
     - config jenkins
     - enable jenkins
 
-- name: Install backup script
-  template:
-    src: jenkins_backup
-    dest: /usr/local/bin/jenkins_backup
-    mode: 0755
-
 - name: Add backup script to cron
   cron:
-    job: "/usr/local/bin/jenkins_backup > /dev/null 2>&1"
+    job: "/usr/local/bin/aws s3 sync /usr/local/jenkins s3://{{bucket}} > /dev/null 2>&1"
     special_time: hourly
     state: present
     name: jenkins_backup
-
-- name: Install sudo
-  pkgng:
-    name: sudo
-    state: present
-
-- name: Jenkins in sudoers
-  lineinfile:
-    dest: /usr/local/etc/sudoers
-    state: present
-    line: "jenkins ALL=(ALL) NOPASSWD: ALL"
 
 - name: Set DNS
   route53:
