@@ -19,11 +19,6 @@
       "Type": "String"
     },
 
-    "BuildNumber": {
-      "Description": "Build number",
-      "Type": "String"
-    },
-
     "KeyName": {
       "Description": "SSH key to use",
       "Type": "AWS::EC2::KeyPair::KeyName"
@@ -264,8 +259,7 @@
         "MaxSize": 2,
         "MinSize": 1,
         "Tags": [
-          { "Key": "Name", "Value": { "Ref": "Project" }, "PropagateAtLaunch": true },
-          { "Key": "Build", "Value": { "Ref": "BuildNumber" }, "PropagateAtLaunch": true }
+          { "Key": "Name", "Value": { "Ref": "Project" }, "PropagateAtLaunch": true }
         ],
         "VPCZoneIdentifier": [
           { "Ref": "SubnetA" },
