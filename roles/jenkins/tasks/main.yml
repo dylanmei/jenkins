@@ -3,10 +3,13 @@
 - name: Gather EC2 facts
   ec2_facts:
 
-- name: Install boto
+- name: Install packages
   pkgng:
-    name: py27-boto
+    name: "{{ item }}"
     state: present
+  with_items:
+    - py27-boto
+    - tex-formats
 
 - name: Install letsencrypt.sh
   pkgng:
