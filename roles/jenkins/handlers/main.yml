@@ -3,27 +3,6 @@
 - name: run letsencrypt.sh
   command: letsencrypt.sh -c
 
-- name: restore jenkins war
-  s3:
-    mode: get
-    bucket: diogenes-jenkins
-    object: /jenkins.war
-    dest: /usr/local/share/jenkins/jenkins.war
-
-- name: fetch jenkins dir
-  s3:
-    mode: get
-    bucket: diogenes-jenkins
-    object: /jenkins.tar.gz
-    dest: /tmp/jenkins.tar.gz
-
-- name: restore jenkins dir
-  unarchive:
-    src: /tmp/jenkins.tar.gz
-    dest: /usr/local/jenkins
-    owner: jenkins
-    group: jenkins
-
 - name: enable jenkins
   service:
     name: jenkins
@@ -31,10 +10,7 @@
     state: started
 
 - name: config jenkins
-  lineinfile:
-    line: jenkins_args="--webroot=/usr/local/jenkins/war --httpPort=8180"
-    dest: /etc/rc.conf
-    state: present
+  command: sysrc jenkins_args="--webroot=/usr/local/jenkins/war --httpPort=8180"
 
 - name: enable nginx
   service:

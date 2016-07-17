@@ -44,9 +44,6 @@
     name: jenkins
     state: present
   notify:
-    - fetch jenkins dir
-    - restore jenkins dir
-    - restore jenkins war
     - config jenkins
     - enable jenkins
 

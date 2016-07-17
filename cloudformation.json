@@ -14,6 +14,11 @@
       "Type": "String"
     },
 
+    "AnsibleVersion": {
+      "Description": "Ansible playbook version",
+      "Type": "String"
+    },
+
     "BuildNumber": {
       "Description": "Build number",
       "Type": "String"
@@ -215,12 +220,21 @@
         ],
         "UserData": { "Fn::Base64": { "Fn::Join": [ "\n", [
           "#!/bin/sh",
-          "cat >> /etc/rc.conf << EOF",
-          "firstboot_pkgs_list=\"ansible awscli git python\"",
-          "EOF",
+          "sysrc firstboot_pkgs_list=\"ansible awscli git python\"",
           "cat > /etc/rc.local << EOF",
-          ". /root/.profile",
-          { "Fn::Join": [ " ", [ "ansible-pull -U", { "Ref": "AnsibleUrl" } ] ] },
+          "export PATH=\\$PATH:/usr/local/bin",
+          "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
+          { "Fn::Join": [ " ", [ "ansible-pull",
+            "-e ansible_python_interpreter=/usr/local/bin/python",
+            "-U", { "Ref": "AnsibleUrl" },
+            "-C", { "Ref": "AnsibleVersion" }
+          ] ] },
+          { "Fn::Join": [ " ", [ "cfn-signal",
+            "--region", { "Ref": "AWS::Region" },
+            "--stack", { "Ref": "AWS::StackName" },
+            "--resource AutoScalingGroup",
+            "--exit-code \\$?"
+          ] ] },
           "EOF"
         ] ] } }
       }
@@ -228,13 +242,25 @@
 
 		"AutoScalingGroup": {
 			"Type": "AWS::AutoScaling::AutoScalingGroup",
+      "CreationPolicy": {
+        "ResourceSignal": {
+          "Count": 1,
+          "Timeout": "PT30M"
+        }
+      },
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "PauseTime": "PT30M",
+          "WaitOnResourceSignals": true
+        }
+      },
 			"Properties": {
         "Cooldown": 1800,
         "DesiredCapacity": 1,
         "HealthCheckGracePeriod": 900,
         "HealthCheckType": "EC2",
         "LaunchConfigurationName": { "Ref": "LaunchConfiguration" },
-        "MaxSize": 1,
+        "MaxSize": 2,
         "MinSize": 1,
         "Tags": [
           { "Key": "Name", "Value": { "Ref": "Project" }, "PropagateAtLaunch": true },
@@ -246,7 +272,12 @@
           { "Ref": "SubnetC" }
         ]
 			}
-		}
+		},
+
+    "Bucket": {
+      "Type" : "AWS::S3::Bucket",
+      "Properties" : {}
+    }
 
   },
 
