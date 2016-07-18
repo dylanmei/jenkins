@@ -203,12 +203,20 @@
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Properties": {
         "AssociatePublicIpAddress": true,
-        "BlockDeviceMappings": [ {
-          "DeviceName": "/dev/sda1",
-          "Ebs": {
-            "VolumeSize": 20
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+              "VolumeSize": 20
+            }
+          },
+          {
+            "DeviceName": "/dev/sdb1",
+            "Ebs": {
+              "VolumeSize": 4
+            }
           }
-        } ],
+        ],
         "EbsOptimized": false,
         "IamInstanceProfile": { "Ref": "InstanceProfile" },
         "ImageId": { "Fn::FindInMap": [ "Regions", { "Ref": "AWS::Region" }, "ImageId" ] },
