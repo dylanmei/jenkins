@@ -9,8 +9,7 @@
     state: present
   with_items:
     - py27-boto
-    - tex-formats
-    - texlive-full
+    - sudo
 
 - name: Install letsencrypt.sh
   pkgng:
@@ -52,6 +51,12 @@
     - upgrade jenkins
     - config jenkins
     - enable jenkins
+
+- name: Jenkins in sudoers
+  lineinfile:
+    dest: /usr/local/etc/sudoers
+    state: present
+    line: "jenkins ALL=(ALL) NOPASSWD: ALL"
 
 - name: Add backup script to cron
   cron:

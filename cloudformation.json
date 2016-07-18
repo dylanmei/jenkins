@@ -247,12 +247,13 @@
       "CreationPolicy": {
         "ResourceSignal": {
           "Count": 1,
-          "Timeout": "PT30M"
+          "Timeout": "PT1H"
         }
       },
       "UpdatePolicy": {
         "AutoScalingRollingUpdate": {
-          "PauseTime": "PT30M",
+          "MinInstancesInService": 1,
+          "PauseTime": "PT1H",
           "WaitOnResourceSignals": true
         }
       },
