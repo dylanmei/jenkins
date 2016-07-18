@@ -3,13 +3,16 @@
 - name: Gather EC2 facts
   ec2_facts:
 
-- name: Turn on swap
+- name: Configure swap
   mount:
     fstype: swap
     name: none
-    state: mounted
+    state: present
     src: /dev/xbd0
     opts: sw
+
+- name: Turn on swap
+  command: swapon -a
 
 - name: Install packages
   pkgng:
