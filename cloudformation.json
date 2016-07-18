@@ -207,11 +207,11 @@
           {
             "DeviceName": "/dev/sda1",
             "Ebs": {
-              "VolumeSize": 20
+              "VolumeSize": 16
             }
           },
           {
-            "DeviceName": "/dev/sdb1",
+            "DeviceName": "xvda",
             "Ebs": {
               "VolumeSize": 4
             }

@@ -3,6 +3,14 @@
 - name: Gather EC2 facts
   ec2_facts:
 
+- name: Turn on swap
+  mount:
+    fstype: swap
+    name: none
+    state: mounted
+    src: /dev/xbd0
+    opts: sw
+
 - name: Install packages
   pkgng:
     name: "{{ item }}"
