@@ -266,9 +266,7 @@
         }
       },
 			"Properties": {
-        "Cooldown": 1800,
         "DesiredCapacity": 1,
-        "HealthCheckGracePeriod": 900,
         "HealthCheckType": "EC2",
         "LaunchConfigurationName": { "Ref": "LaunchConfiguration" },
         "MaxSize": 2,
