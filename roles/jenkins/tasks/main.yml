@@ -48,6 +48,7 @@
     name: jenkins
     state: present
   notify:
+    - restore jenkins
     - config jenkins
     - enable jenkins
 
