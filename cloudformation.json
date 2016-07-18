@@ -236,8 +236,10 @@
           "export PATH=\\$PATH:/usr/local/bin",
           "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
           { "Fn::Join": [ " ", [ "ansible-pull",
-            "-e ansible_python_interpreter=/usr/local/bin/python",
-            "-e", { "Fn::Join": [ "", [ "bucket=", { "Ref": "Bucket" } ] ] },
+            "-e =",
+            "-e", { "Fn::Join": [ "=", [ "ansible_python_interpreter", "/usr/local/bin/python" ] ] },
+            "-e", { "Fn::Join": [ "=", [ "bucket", { "Ref": "Bucket" } ] ] },
+            "-e", { "Fn::Join": [ "=", [ "commit", { "Ref": "AnsibleVersion" } ] ] },
             "-U", { "Ref": "AnsibleUrl" },
             "-C", { "Ref": "AnsibleVersion" }
           ] ] },
