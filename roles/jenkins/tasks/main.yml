@@ -49,6 +49,7 @@
     state: present
   notify:
     - restore jenkins
+    - upgrade jenkins
     - config jenkins
     - enable jenkins
 
