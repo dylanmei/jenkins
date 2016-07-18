@@ -207,13 +207,15 @@
           {
             "DeviceName": "/dev/sda1",
             "Ebs": {
-              "VolumeSize": 16
+              "VolumeSize": 16,
+              "VolumeType": "gp2"
             }
           },
           {
             "DeviceName": "xvda",
             "Ebs": {
-              "VolumeSize": 4
+              "VolumeSize": 4,
+              "VolumeType": "gp2"
             }
           }
         ],
