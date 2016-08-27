@@ -16,7 +16,7 @@
     owner: root
     group: wheel
     mode: 0644
-    checksum: sha256:27035f95413f625013b6e7e80b95d6c9b3d0ca084c2bd632f8ecad22229e7453
+    checksum: sha256:05b7f31b14704810eaa5479cc6ce699fa0dc46e63599ad4436ffb1b4e44a06b3
 
 - name: restore jenkins
   command: "/usr/local/bin/aws s3 sync s3://{{ bucket }} /usr/local/jenkins"
