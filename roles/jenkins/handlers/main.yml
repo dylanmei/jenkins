@@ -11,12 +11,12 @@
 
 - name: upgrade jenkins
   get_url:
-    url: https://updates.jenkins-ci.org/download/war/2.14/jenkins.war
+    url: https://updates.jenkins-ci.org/download/war/2.19/jenkins.war
     dest: /usr/local/share/jenkins/jenkins.war
     owner: root
     group: wheel
     mode: 0644
-    checksum: sha256:e438434600d067d09c6045e5940fb4298ec0fcda37b84f3f279f34b6b0b34b90
+    checksum: sha256:27035f95413f625013b6e7e80b95d6c9b3d0ca084c2bd632f8ecad22229e7453
 
 - name: restore jenkins
   command: "/usr/local/bin/aws s3 sync s3://{{ bucket }} /usr/local/jenkins"
