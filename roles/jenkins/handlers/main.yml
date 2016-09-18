@@ -10,7 +10,7 @@
   mount:
     fstype: nfs
     name: /usr/local/jenkins
-    state: present
+    state: mounted
     opts: nfsv4
     src: "{{ ansible_ec2_placement_availability_zone}}.{{ jenkins_file_system }}.efs.{{ ansible_ec2_placement_availability_zone[:-1] }}.amazonaws.com:/"
 
