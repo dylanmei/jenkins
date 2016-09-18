@@ -1,7 +1,17 @@
 ---
 
-- name: run letsencrypt.sh
+- name: run letsencrypt
   command: letsencrypt.sh -c
+
+- name: set ec2 facts
+  action: ec2_facts
+
+- name: mount jenkins file system
+  mount:
+    fstype: nfs
+    name: /usr/local/jenkins
+    state: present
+    src: "{{ ansible_ec2_placement_availability_zone}}.{{ jenkins_file_system }}.efs.{{ ansible_ec2_placement_availability_zone[:-2] }}.amazonaws.com:/"
 
 - name: enable jenkins
   service:
@@ -18,18 +28,7 @@
     mode: 0644
     checksum: sha256:ef3693cb5e8c433b9a98b7438c73706b9b41542d781f2ba280cd85ccec307c78
 
-- name: restore jenkins
-  command: "/usr/local/bin/aws s3 sync s3://{{ bucket }} /usr/local/jenkins"
-  notify: jenkins permissions
-
-- name: jenkins permissions
-  file:
-    path: /usr/local/jenkins
-    recurse: yes
-    owner: jenkins
-    group: jenkins
-
-- name: config jenkins
+- name: configure jenkins
   command: "sysrc jenkins_args='--webroot=/usr/local/jenkins/war --httpPort=8180'"
 
 - name: enable nginx

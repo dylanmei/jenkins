@@ -1,5 +1,5 @@
-#!/bin/sh
-region=ap-southeast-2
+#!/bin/sh -e
+region=us-west-2
 if aws --region ${region} cloudformation describe-stacks --stack-name ${JOB_NAME}; then
   action=update-stack
   wait=stack-update-complete
@@ -13,7 +13,6 @@ aws --region ${region} cloudformation ${action} \
   --template-body file://cloudformation.json \
   --parameters \
   ParameterKey=AnsibleUrl,ParameterValue=${GIT_URL} \
-  ParameterKey=InstanceType,ParameterValue=t2.nano \
-  ParameterKey=KeyName,ParameterValue=diogenes
+  ParameterKey=AnsibleVersion,ParameterValue=${GIT_COMMIT} \
 aws --region ${region} cloudformation wait ${wait} \
   --stack-name ${JOB_NAME}

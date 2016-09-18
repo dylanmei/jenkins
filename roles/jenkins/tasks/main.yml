@@ -1,9 +1,9 @@
 ---
 
-- name: Gather EC2 facts
+- name: gather ec2 facts
   ec2_facts:
 
-- name: Configure swap
+- name: configure swap
   mount:
     fstype: swap
     name: none
@@ -11,23 +11,28 @@
     src: /dev/xbd0
     opts: sw
 
-- name: Turn on swap
+- name: turn on swap
   command: swapon -a
 
-- name: Install packages
+- name: create jenkins directory
+  file:
+    state: directory
+    path: /usr/local/jenkins
+  notify: mount jenkins file system
+
+- name: install packages
   pkgng:
     name: "{{ item }}"
     state: present
   with_items:
     - py27-boto
-    - sudo
 
-- name: Install letsencrypt.sh
+- name: install letsencrypt
   pkgng:
     name: letsencrypt.sh
     state: present
 
-- name: Configure letsencrypt.sh
+- name: configure letsencrypt
   template:
     src: "{{ item }}"
     dest: "/usr/local/etc/letsencrypt.sh/{{ item }}"
@@ -35,48 +40,49 @@
   with_items:
     - config.sh
     - domains.txt
-  notify: run letsencrypt.sh
+  notify: run letsencrypt
 
-- name: Add hook for letsencrypt.sh
+- name: add hook for letsencrypt
   template:
     src: "{{ item }}"
     dest: "/usr/local/etc/letsencrypt.sh/{{ item }}"
     mode: 0755
   with_items:
     - hook.sh
-  notify: run letsencrypt.sh
+  notify: run letsencrypt
 
-- name: Add letsencrypt.sh to periodic.conf
+- name: add letsencrypt to cron
   lineinfile:
     create: yes
     dest: /etc/periodic.conf
     line: weekly_letsencrypt_enable="YES"
     state: present
 
-- name: Install Jenkins
+- name: install jenkins
   pkgng:
     name: jenkins
     state: present
   notify:
-    - restore jenkins
     - upgrade jenkins
-    - config jenkins
+    - configure jenkins
     - enable jenkins
 
-- name: Jenkins in sudoers
-  lineinfile:
-    dest: /usr/local/etc/sudoers
+- name: install nginx
+  pkgng:
+    name: nginx-devel
     state: present
-    line: "jenkins ALL=(ALL) NOPASSWD: ALL"
+  notify: enable nginx
 
-- name: Add backup script to cron
-  cron:
-    job: "/usr/local/bin/aws s3 sync /usr/local/jenkins s3://{{bucket}} > /dev/null 2>&1"
-    special_time: hourly
-    state: present
-    name: jenkins_backup
+- name: configure nginx
+  template:
+    src: "{{ item }}"
+    dest: "/usr/local/etc/nginx/{{ item }}"
+  with_items:
+    - nginx.conf
+    - ssl.conf
+  notify: reload nginx
 
-- name: Set DNS
+- name: set dns
   route53:
     command: create
     overwrite: yes
@@ -85,18 +91,3 @@
     type: CNAME
     value: "{{ ansible_ec2_public_hostname }}"
     zone: dylanscott.com.au.
-
-- name: Install Nginx
-  pkgng:
-    name: nginx-devel
-    state: present
-  notify: enable nginx
-
-- name: Configure Nginx
-  template:
-    src: "{{ item }}"
-    dest: "/usr/local/etc/nginx/{{ item }}"
-  with_items:
-    - nginx.conf
-    - ssl.conf
-  notify: reload nginx

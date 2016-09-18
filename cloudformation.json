@@ -11,6 +11,7 @@
 
     "AnsibleUrl": {
       "Description": "Ansible playbook location",
+      "Default": "https://github.com/dylanjgscott/jenkins.git",
       "Type": "String"
     },
 
@@ -21,11 +22,13 @@
 
     "KeyName": {
       "Description": "SSH key to use",
+      "Default": "diogenes",
       "Type": "AWS::EC2::KeyPair::KeyName"
     },
 
     "InstanceType": {
       "Description": "Instance type to use",
+      "Default": "t2.nano",
       "Type": "String"
     },
 
@@ -39,9 +42,17 @@
 
   "Mappings": {
     "Regions": {
-      "ap-southeast-2": {
-        "ImageId": "ami-80e8cae3"
-      }
+      "ap-south-1": { "ImageId": "ami-66cca709" },
+      "eu-west-1": { "ImageId": "ami-809012f3" },
+      "ap-southeast-1": { "ImageId": "ami-28588d4b" },
+      "ap-southeast-2": { "ImageId": "ami-80e8cae3" },
+      "ap-northeast-2": { "ImageId": "ami-84d810ea" },
+      "eu-central-1": { "ImageId": "ami-eef91981" },
+      "ap-northeast-1": { "ImageId": "ami-04889a6a" },
+      "us-east-1": { "ImageId": "ami-65e5f60f" },
+      "us-west-1": { "ImageId": "ami-913d42f1" },
+      "sa-east-1": { "ImageId": "ami-29e36d45" },
+      "us-west-2": { "ImageId": "ami-aeec1bce" }
     }
   },
 
@@ -151,11 +162,12 @@
       }
     },
 
-    "SecurityGroup": {
+    "InstanceSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Permit SSH and HTTPS",
+        "GroupDescription": "Permit ICMP, SSH and HTTPS",
         "SecurityGroupIngress": [
+          { "IpProtocol": "icmp", "FromPort": "-1", "ToPort": "-1", "CidrIp": "0.0.0.0/0" },
           { "IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": "0.0.0.0/0" },
           { "IpProtocol": "tcp", "FromPort": "443", "ToPort": "443", "CidrIp": "0.0.0.0/0" }
         ],
@@ -164,7 +176,7 @@
       }
     },
 
-    "Role": {
+    "InstanceRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
         "AssumeRolePolicyDocument": {
@@ -194,7 +206,7 @@
       "Properties": {
         "Path": "/",
         "Roles": [
-          { "Ref": "Role" }
+          { "Ref": "InstanceRole" }
         ]
       }
     },
@@ -227,7 +239,7 @@
         "KeyName": { "Ref": "KeyName" },
         "PlacementTenancy": "default",
         "SecurityGroups": [
-          { "Ref": "SecurityGroup" }
+          { "Ref": "InstanceSecurityGroup" }
         ],
         "UserData": { "Fn::Base64": { "Fn::Join": [ "\n", [
           "#!/bin/sh",
@@ -238,7 +250,7 @@
           { "Fn::Join": [ " ", [ "ansible-pull",
             "-e =",
             "-e", { "Fn::Join": [ "=", [ "ansible_python_interpreter", "/usr/local/bin/python" ] ] },
-            "-e", { "Fn::Join": [ "=", [ "bucket", { "Ref": "Bucket" } ] ] },
+            "-e", { "Fn::Join": [ "=", [ "jenkins_file_system", { "Ref": "FileSystem" } ] ] },
             "-e", { "Fn::Join": [ "=", [ "commit", { "Ref": "AnsibleVersion" } ] ] },
             "-U", { "Ref": "AnsibleUrl" },
             "-C", { "Ref": "AnsibleVersion" }
@@ -286,9 +298,52 @@
 			}
 		},
 
-    "Bucket": {
-      "Type" : "AWS::S3::Bucket",
-      "Properties" : {}
+    "MountTargetSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Permit ICMP and NFS",
+        "SecurityGroupIngress": [
+          { "IpProtocol": "icmp", "FromPort": "-1", "ToPort": "-1", "CidrIp": "0.0.0.0/0" },
+          { "IpProtocol": "tcp", "FromPort": "2049", "ToPort": "2049", "SourceSecurityGroupId": { "Ref": "InstanceSecurityGroup" } }
+        ],
+        "Tags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ],
+        "VpcId": { "Ref": "Vpc" }
+      }
+    },
+
+    "FileSystem": {
+      "Type": "AWS::EFS::FileSystem",
+      "Properties": {
+        "PerformanceMode": "generalPurpose",
+        "FileSystemTags": [ { "Key": "Name", "Value": { "Ref": "Project" } } ]
+      }
+    },
+
+    "MountTargetA": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": { "Ref": "FileSystem" },
+        "SecurityGroups": [ { "Ref": "MountTargetSecurityGroup" } ],
+        "SubnetId": { "Ref": "SubnetA" }
+      }
+    },
+
+    "MountTargetB": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": { "Ref": "FileSystem" },
+        "SecurityGroups": [ { "Ref": "MountTargetSecurityGroup" } ],
+        "SubnetId": { "Ref": "SubnetB" }
+      }
+    },
+
+    "MountTargetC": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": { "Ref": "FileSystem" },
+        "SecurityGroups": [ { "Ref": "MountTargetSecurityGroup" } ],
+        "SubnetId": { "Ref": "SubnetC" }
+      }
     }
 
   },
