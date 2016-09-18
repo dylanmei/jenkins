@@ -14,12 +14,12 @@
 
 - name: upgrade jenkins
   get_url:
-    url: https://updates.jenkins-ci.org/download/war/2.21/jenkins.war
+    url: https://updates.jenkins-ci.org/download/war/2.22/jenkins.war
     dest: /usr/local/share/jenkins/jenkins.war
     owner: root
     group: wheel
     mode: 0644
-    checksum: sha256:ef3693cb5e8c433b9a98b7438c73706b9b41542d781f2ba280cd85ccec307c78
+    checksum: sha256:e6406099792b631b968968194020ac7095113b68bb9ae7922fcc9a777eece1cc
 
 - name: configure jenkins
   command: "sysrc jenkins_args='--webroot=/usr/local/jenkins/war --httpPort=8180'"
