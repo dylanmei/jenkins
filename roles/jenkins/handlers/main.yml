@@ -11,7 +11,8 @@
     fstype: nfs
     name: /usr/local/jenkins
     state: present
-    src: "{{ ansible_ec2_placement_availability_zone}}.{{ jenkins_file_system }}.efs.{{ ansible_ec2_placement_availability_zone[:-2] }}.amazonaws.com:/"
+    opts: nfsv4
+    src: "{{ ansible_ec2_placement_availability_zone}}.{{ jenkins_file_system }}.efs.{{ ansible_ec2_placement_availability_zone[:-1] }}.amazonaws.com:/"
 
 - name: enable jenkins
   service:
