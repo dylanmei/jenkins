@@ -11,6 +11,12 @@
     src: /dev/xbd0
     opts: sw
 
+- name: enable nfsclient
+  service:
+    enabled: yes
+    state: started
+    name: nfsclient
+
 - name: turn on swap
   command: swapon -a
 
