@@ -6,14 +6,6 @@
 - name: set ec2 facts
   action: ec2_facts
 
-- name: mount jenkins file system
-  mount:
-    fstype: nfs
-    name: /usr/local/jenkins
-    state: mounted
-    opts: nfsv4
-    src: "{{ ansible_ec2_placement_availability_zone}}.{{ jenkins_file_system }}.efs.{{ ansible_ec2_placement_availability_zone[:-1] }}.amazonaws.com:/"
-
 - name: enable jenkins
   service:
     name: jenkins
