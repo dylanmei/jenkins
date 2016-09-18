@@ -39,6 +39,13 @@
     state: present
   with_items:
     - py27-boto
+    - sudo
+
+- name: add jenkins to sudoers
+  lineinfile:
+    dest: /usr/local/etc/sudoers
+    state: present
+    line: "jenkins ALL=(ALL) NOPASSWD: ALL"
 
 - name: install letsencrypt
   pkgng:
