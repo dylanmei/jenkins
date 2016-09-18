@@ -13,6 +13,6 @@ aws --region ${region} cloudformation ${action} \
   --template-body file://cloudformation.json \
   --parameters \
   UsePreviousValue=false,ParameterKey=AnsibleUrl,ParameterValue=${GIT_URL} \
-  UsePreviousValue=false,ParameterKey=AnsibleVersion,ParameterValue=${GIT_COMMIT} \
+  UsePreviousValue=false,ParameterKey=AnsibleVersion,ParameterValue=${GIT_COMMIT}
 aws --region ${region} cloudformation wait ${wait} \
   --stack-name ${JOB_NAME}
