@@ -1,0 +1,327 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Conditions: {}
+
+Description: Jenkins server
+
+Mappings:
+
+  Regions:
+    ap-northeast-1:
+      ImageId: ami-04889a6a
+    ap-northeast-2:
+      ImageId: ami-84d810ea
+    ap-south-1:
+      ImageId: ami-66cca709
+    ap-southeast-1:
+      ImageId: ami-28588d4b
+    ap-southeast-2:
+      ImageId: ami-80e8cae3
+    eu-central-1:
+      ImageId: ami-eef91981
+    eu-west-1:
+      ImageId: ami-809012f3
+    sa-east-1:
+      ImageId: ami-29e36d45
+    us-east-1:
+      ImageId: ami-65e5f60f
+    us-west-1:
+      ImageId: ami-913d42f1
+    us-west-2:
+      ImageId: ami-aeec1bce
+
+Metadata: {}
+
+Outputs: {}
+
+Parameters:
+
+  AnsibleUrl:
+    Default: https://github.com/dylanjgscott/jenkins.git
+    Description: Ansible playbook location
+    Type: String
+
+  AnsibleVersion:
+    Description: Ansible playbook version
+    Type: String
+
+  InstanceType:
+    Default: t2.nano
+    Description: Instance type to use
+    Type: String
+
+  KeyName:
+    Default: diogenes
+    Description: SSH key to use
+    Type: AWS::EC2::KeyPair::KeyName
+
+  Project:
+    Default: jenkins
+    Description: Project name
+    Type: String
+
+Resources:
+
+  AutoScalingGroup:
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT1H
+    Properties:
+      DesiredCapacity: 1
+      HealthCheckType: EC2
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: 2
+      MinSize: 1
+      Tags:
+      - Key: Name
+        PropagateAtLaunch: true
+        Value: !Ref Project
+      VPCZoneIdentifier:
+      - !Ref SubnetA
+      - !Ref SubnetB
+      - !Ref SubnetC
+    Type: AWS::AutoScaling::AutoScalingGroup
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        PauseTime: PT1H
+        WaitOnResourceSignals: true
+
+  FileSystem:
+    Properties:
+      FileSystemTags:
+      - Key: Name
+        Value: !Ref Project
+      PerformanceMode: generalPurpose
+    Type: AWS::EFS::FileSystem
+
+  InstanceProfile:
+    Properties:
+      Path: /
+      Roles:
+      - !Ref InstanceRole
+    Type: AWS::IAM::InstanceProfile
+
+  InstanceRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AdministratorAccess
+    Type: AWS::IAM::Role
+
+  InstanceSecurityGroup:
+    Properties:
+      GroupDescription: Permit ICMP, SSH and HTTPS
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: icmp
+        FromPort: -1
+        ToPort: -1
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+      VpcId: !Ref Vpc
+    Type: AWS::EC2::SecurityGroup
+
+  InternetGateway:
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+    Type: AWS::EC2::InternetGateway
+
+  LaunchConfiguration:
+    Properties:
+      AssociatePublicIpAddress: true
+      BlockDeviceMappings:
+      - DeviceName: /dev/sda1
+        Ebs:
+          VolumeSize: 16
+          VolumeType: gp2
+      - DeviceName: xvda
+        Ebs:
+          VolumeSize: 4
+          VolumeType: gp2
+      EbsOptimized: false
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId:
+        !FindInMap
+        - Regions
+        - !Ref AWS::Region
+        - ImageId
+      InstanceMonitoring: false
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      PlacementTenancy: default
+      SecurityGroups:
+      - !Ref InstanceSecurityGroup
+      UserData:
+        !Base64
+          Fn::Sub: |
+            #!/bin/sh
+            sysrc firstboot_pkgs_list="ansible awscli git python"
+            cat > /etc/rc.local << EOF
+            export PATH=\$PATH:/usr/local/bin
+            easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+            ansible-pull \
+              -e ansible_python_interpreter=/usr/local/bin/python \
+              -e jenkins_file_system=${FileSystem} \
+              -e commit=${AnsibleVersion} \
+              -U ${AnsibleUrl} \
+              -C ${AnsibleVersion}
+            cfn-signal \
+              --region ${AWS::Region} \
+              --stack ${AWS::StackName} \
+              --resource AutoScalingGroup \
+              --exit-code \$?
+            EOF
+    Type: AWS::AutoScaling::LaunchConfiguration
+
+  MountTargetA:
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SecurityGroups:
+      - !Ref MountTargetSecurityGroup
+      SubnetId: !Ref SubnetA
+    Type: AWS::EFS::MountTarget
+
+  MountTargetB:
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SecurityGroups:
+      - !Ref MountTargetSecurityGroup
+      SubnetId: !Ref SubnetB
+    Type: AWS::EFS::MountTarget
+
+  MountTargetC:
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SecurityGroups:
+      - !Ref MountTargetSecurityGroup
+      SubnetId: !Ref SubnetC
+    Type: AWS::EFS::MountTarget
+
+  MountTargetSecurityGroup:
+    Properties:
+      GroupDescription: Permit ICMP and NFS
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: icmp
+        FromPort: -1
+        ToPort: -1
+      - SourceSecurityGroupId: !Ref InstanceSecurityGroup
+        IpProtocol: tcp
+        FromPort: 2049
+        ToPort: 2049
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+      VpcId: !Ref Vpc
+    Type: AWS::EC2::SecurityGroup
+
+  Route:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTable
+    Type: AWS::EC2::Route
+
+  RouteTable:
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+      VpcId: !Ref Vpc
+    Type: AWS::EC2::RouteTable
+
+  SubnetA:
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 0
+        - !GetAZs
+      CidrBlock: 192.168.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+      VpcId: !Ref Vpc
+    Type: AWS::EC2::Subnet
+
+  SubnetB:
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 1
+        - !GetAZs
+      CidrBlock: 192.168.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+      VpcId: !Ref Vpc
+    Type: AWS::EC2::Subnet
+
+  SubnetC:
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 2
+        - !GetAZs
+      CidrBlock: 192.168.2.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+      VpcId: !Ref Vpc
+    Type: AWS::EC2::Subnet
+
+  SubnetRouteTableAssociationA:
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref SubnetA
+    Type: AWS::EC2::SubnetRouteTableAssociation
+
+  SubnetRouteTableAssociationB:
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref SubnetB
+    Type: AWS::EC2::SubnetRouteTableAssociation
+
+  SubnetRouteTableAssociationC:
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref SubnetC
+    Type: AWS::EC2::SubnetRouteTableAssociation
+
+  Vpc:
+    Properties:
+      CidrBlock: 192.168.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+    Type: AWS::EC2::VPC
+
+  VpcGatewayAttachment:
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref Vpc
+    Type: AWS::EC2::VPCGatewayAttachment

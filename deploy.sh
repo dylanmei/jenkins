@@ -10,7 +10,7 @@ fi
 aws --region ${region} cloudformation ${action} \
   --stack-name ${JOB_NAME} \
   --capabilities CAPABILITY_IAM \
-  --template-body file://cloudformation.json \
+  --template-body file://cloudformation.yaml \
   --parameters \
   UsePreviousValue=false,ParameterKey=AnsibleUrl,ParameterValue=${GIT_URL} \
   UsePreviousValue=false,ParameterKey=AnsibleVersion,ParameterValue=${GIT_COMMIT}
