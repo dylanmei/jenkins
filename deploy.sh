@@ -12,5 +12,5 @@ aws --region ${region} cloudformation ${action} \
   --capabilities CAPABILITY_IAM \
   --template-body file://cloudformation.yaml \
   --parameters \
-  UsePreviousValue=false,ParameterKey=AnsibleUrl,ParameterValue=${GIT_URL} \
-  UsePreviousValue=false,ParameterKey=AnsibleVersion,ParameterValue=${GIT_COMMIT}
+  ParameterKey=AnsibleUrl,ParameterValue=${GIT_URL} \
+  ParameterKey=AnsibleVersion,ParameterValue=${GIT_COMMIT}
