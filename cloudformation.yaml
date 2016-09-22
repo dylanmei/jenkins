@@ -173,7 +173,7 @@ Resources:
       UserData:
         !Base64
           Fn::Sub: |
-            #!/bin/sh
+            #!/bin/sh -e
             sysrc firstboot_pkgs_list="ansible awscli git python"
             cat > /etc/rc.local << EOF
             export PATH=\$PATH:/usr/local/bin
