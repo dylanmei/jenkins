@@ -37,36 +37,47 @@ Outputs: {}
 Parameters:
 
   AnsibleUrl:
+    Type: String
     Default: https://github.com/dylanjgscott/jenkins.git
     Description: Ansible playbook location
-    Type: String
 
   AnsibleVersion:
-    Description: Ansible playbook version
     Type: String
+    Description: Ansible playbook version
+
+  CertificateArn:
+    Type: String
+    Default: arn:aws:acm:us-west-2:584259415401:certificate/fac69964-65b5-42f7-8cac-9a8a98154819
+    Description: ARN of Certficate Manager resource
 
   InstanceType:
+    Type: String
     Default: t2.nano
     Description: Instance type to use
-    Type: String
 
   KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
     Default: diogenes
     Description: SSH key to use
-    Type: AWS::EC2::KeyPair::KeyName
 
   Project:
+    Type: String
     Default: jenkins
     Description: Project name
-    Type: String
 
 Resources:
 
   AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
         Count: 1
         Timeout: PT1H
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        PauseTime: PT1H
+        WaitOnResourceSignals: true
     Properties:
       DesiredCapacity: 1
       HealthCheckType: EC2
@@ -77,33 +88,77 @@ Resources:
       - Key: Name
         PropagateAtLaunch: true
         Value: !Ref Project
+      TargetGroupARNs:
+      - !Ref HttpTargetGroup
+      - !Ref HttpsTargetGroup
       VPCZoneIdentifier:
       - !Ref SubnetA
       - !Ref SubnetB
       - !Ref SubnetC
-    Type: AWS::AutoScaling::AutoScalingGroup
-    UpdatePolicy:
-      AutoScalingRollingUpdate:
-        MinInstancesInService: 1
-        PauseTime: PT1H
-        WaitOnResourceSignals: true
 
   FileSystem:
+    Type: AWS::EFS::FileSystem
     Properties:
       FileSystemTags:
       - Key: Name
         Value: !Ref Project
       PerformanceMode: generalPurpose
-    Type: AWS::EFS::FileSystem
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+      - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+      - TargetGroupArn: !Ref HttpsTargetGroup
+        Type: forward
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+
+  HttpTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      Matcher:
+        HttpCode: 200-399
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+      VpcId: !Ref Vpc
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - TargetGroupArn: !Ref HttpTargetGroup
+        Type: forward
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  HttpsTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 81
+      Protocol: HTTP
+      Matcher:
+        HttpCode: 200-399
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+      VpcId: !Ref Vpc
 
   InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
     Properties:
       Path: /
       Roles:
       - !Ref InstanceRole
-    Type: AWS::IAM::InstanceProfile
 
   InstanceRole:
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
@@ -114,11 +169,11 @@ Resources:
         Version: 2012-10-17
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/AdministratorAccess
-    Type: AWS::IAM::Role
 
   InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Permit ICMP, SSH and HTTPS
+      GroupDescription: Permit ICMP, SSH and load balancer traffic
       SecurityGroupIngress:
       - CidrIp: 0.0.0.0/0
         IpProtocol: icmp
@@ -128,24 +183,28 @@ Resources:
         IpProtocol: tcp
         FromPort: 22
         ToPort: 22
-      - CidrIp: 0.0.0.0/0
+      - SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
         IpProtocol: tcp
-        FromPort: 443
-        ToPort: 443
+        FromPort: 80
+        ToPort: 80
+      - SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+        IpProtocol: tcp
+        FromPort: 81
+        ToPort: 81
       Tags:
       - Key: Name
         Value: !Ref Project
       VpcId: !Ref Vpc
-    Type: AWS::EC2::SecurityGroup
 
   InternetGateway:
+    Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
       - Key: Name
         Value: !Ref Project
-    Type: AWS::EC2::InternetGateway
 
   LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       AssociatePublicIpAddress: true
       BlockDeviceMappings:
@@ -190,33 +249,67 @@ Resources:
               --resource AutoScalingGroup \
               --exit-code \$?
             EOF
-    Type: AWS::AutoScaling::LaunchConfiguration
 
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      SecurityGroups:
+      - !Ref LoadBalancerSecurityGroup
+      Subnets:
+      - !Ref SubnetA
+      - !Ref SubnetB
+      - !Ref SubnetC
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Permit ICMP, HTTP and HTTPS
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: icmp
+        FromPort: -1
+        ToPort: -1
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+      Tags:
+      - Key: Name
+        Value: !Ref Project
+ 
   MountTargetA:
+    Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref FileSystem
       SecurityGroups:
       - !Ref MountTargetSecurityGroup
       SubnetId: !Ref SubnetA
-    Type: AWS::EFS::MountTarget
 
   MountTargetB:
+    Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref FileSystem
       SecurityGroups:
       - !Ref MountTargetSecurityGroup
       SubnetId: !Ref SubnetB
-    Type: AWS::EFS::MountTarget
 
   MountTargetC:
+    Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref FileSystem
       SecurityGroups:
       - !Ref MountTargetSecurityGroup
       SubnetId: !Ref SubnetC
-    Type: AWS::EFS::MountTarget
 
   MountTargetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Permit ICMP and NFS
       SecurityGroupIngress:
@@ -232,24 +325,24 @@ Resources:
       - Key: Name
         Value: !Ref Project
       VpcId: !Ref Vpc
-    Type: AWS::EC2::SecurityGroup
 
   Route:
+    Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
       RouteTableId: !Ref RouteTable
-    Type: AWS::EC2::Route
 
   RouteTable:
+    Type: AWS::EC2::RouteTable
     Properties:
       Tags:
       - Key: Name
         Value: !Ref Project
       VpcId: !Ref Vpc
-    Type: AWS::EC2::RouteTable
 
   SubnetA:
+    Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
         !Select
@@ -261,9 +354,9 @@ Resources:
       - Key: Name
         Value: !Ref Project
       VpcId: !Ref Vpc
-    Type: AWS::EC2::Subnet
 
   SubnetB:
+    Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
         !Select
@@ -275,9 +368,9 @@ Resources:
       - Key: Name
         Value: !Ref Project
       VpcId: !Ref Vpc
-    Type: AWS::EC2::Subnet
 
   SubnetC:
+    Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone:
         !Select
@@ -289,27 +382,27 @@ Resources:
       - Key: Name
         Value: !Ref Project
       VpcId: !Ref Vpc
-    Type: AWS::EC2::Subnet
 
   SubnetRouteTableAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref SubnetA
-    Type: AWS::EC2::SubnetRouteTableAssociation
 
   SubnetRouteTableAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref SubnetB
-    Type: AWS::EC2::SubnetRouteTableAssociation
 
   SubnetRouteTableAssociationC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref SubnetC
-    Type: AWS::EC2::SubnetRouteTableAssociation
 
   Vpc:
+    Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 192.168.0.0/16
       EnableDnsHostnames: true
@@ -318,10 +411,9 @@ Resources:
       Tags:
       - Key: Name
         Value: !Ref Project
-    Type: AWS::EC2::VPC
 
   VpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref Vpc
-    Type: AWS::EC2::VPCGatewayAttachment
