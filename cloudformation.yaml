@@ -78,8 +78,6 @@ Resources:
         MinInstancesInService: 1
         PauseTime: PT1H
         WaitOnResourceSignals: true
-    Metadata:
-      AnsibleVersion: !Ref AnsibleVersion
     Properties:
       DesiredCapacity: 1
       HealthCheckType: EC2
@@ -207,6 +205,8 @@ Resources:
 
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AnsibleVersion: !Ref AnsibleVersion
     Properties:
       AssociatePublicIpAddress: true
       BlockDeviceMappings:
