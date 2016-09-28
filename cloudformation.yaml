@@ -240,7 +240,6 @@ Resources:
             ansible-pull \
               -e ansible_python_interpreter=/usr/local/bin/python \
               -e jenkins_file_system=${FileSystem} \
-              -e commit=${AnsibleVersion} \
               -U ${AnsibleUrl} \
               -C ${AnsibleVersion}
             cfn-signal \
