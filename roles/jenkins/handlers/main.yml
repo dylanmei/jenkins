@@ -1,11 +1,5 @@
 ---
 
-- name: run letsencrypt
-  command: letsencrypt.sh -c
-
-- name: set ec2 facts
-  action: ec2_facts
-
 - name: enable jenkins
   service:
     name: jenkins

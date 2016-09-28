@@ -11,14 +11,14 @@
     src: /dev/xbd0
     opts: sw
 
+- name: turn on swap
+  command: swapon -a
+
 - name: enable nfsclient
   service:
     enabled: yes
     state: started
     name: nfsclient
-
-- name: turn on swap
-  command: swapon -a
 
 - name: create jenkins directory
   file:
@@ -47,37 +47,6 @@
     state: present
     line: "jenkins ALL=(ALL) NOPASSWD: ALL"
 
-- name: install letsencrypt
-  pkgng:
-    name: letsencrypt.sh
-    state: present
-
-- name: configure letsencrypt
-  template:
-    src: "{{ item }}"
-    dest: "/usr/local/etc/letsencrypt.sh/{{ item }}"
-    mode: 0700
-  with_items:
-    - config.sh
-    - domains.txt
-  notify: run letsencrypt
-
-- name: add hook for letsencrypt
-  template:
-    src: "{{ item }}"
-    dest: "/usr/local/etc/letsencrypt.sh/{{ item }}"
-    mode: 0755
-  with_items:
-    - hook.sh
-  notify: run letsencrypt
-
-- name: add letsencrypt to cron
-  lineinfile:
-    create: yes
-    dest: /etc/periodic.conf
-    line: weekly_letsencrypt_enable="YES"
-    state: present
-
 - name: install jenkins
   pkgng:
     name: jenkins
@@ -99,15 +68,4 @@
     dest: "/usr/local/etc/nginx/{{ item }}"
   with_items:
     - nginx.conf
-    - ssl.conf
   notify: reload nginx
-
-- name: set dns
-  route53:
-    command: create
-    overwrite: yes
-    record: jenkins.dylanscott.com.au.
-    ttl: 300
-    type: CNAME
-    value: "{{ ansible_ec2_public_hostname }}"
-    zone: dylanscott.com.au.
