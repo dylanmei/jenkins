@@ -78,7 +78,8 @@ Resources:
         MinInstancesInService: 1
         PauseTime: PT1H
         WaitOnResourceSignals: true
-    Metadata: !Ref AnsibleVersion
+    Metadata:
+      AnsibleVersion: !Ref AnsibleVersion
     Properties:
       DesiredCapacity: 1
       HealthCheckType: EC2
